@@ -1,0 +1,41 @@
+# Configuration de sécurité stricte pour Ollama
+# Fichier d'aide pour renforcer la restriction de domaine
+
+version: "3.8"
+
+# Alternative avec proxy nginx pour validation STRICTE
+# Décommenter si besoin d'une sécurité supplémentaire
+
+services:
+  # Proxy nginx pour validation strict du domaine
+  # (optionnel - activez si besoin de sécurité maximale)
+  
+  ollama-proxy:
+    image: nginx:alpine
+    container_name: generative-ollama-proxy
+    ports:
+      - "11435:8080"  # Port proxy interne
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - ALLOWED_DOMAIN=bluevaloris.com
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    networks:
+      - backend
+    depends_on:
+      - ollama
+
+networks:
+  backend:
+    external: true
+
+# NOTES:
+# 1. Cette configuration est optionnelle si Traefik gère déjà l'accès
+# 2. Utile pour logging et audit des domaines autorisés
+# 3. Ajoute une couche de validation personnalisée
+# 4. Peut être utilisée en conjonction avec Traefik
