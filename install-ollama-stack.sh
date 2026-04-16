@@ -71,9 +71,9 @@ cd "$PROJECT_DIR"
 echo ""
 echo -e "${BLUE}Step 3: Creating Docker volumes...${NC}"
 
-docker volume create chatbot-engine_ollama_data 2>/dev/null || true
-docker volume create chatbot-engine_redis_data 2>/dev/null || true
-docker volume create chatbot-engine_postgres_data 2>/dev/null || true
+docker volume create lantorian_genai_ollama_data 2>/dev/null || true
+docker volume create lantorian_genai_redis_data 2>/dev/null || true
+docker volume create lantorian_genai_postgres_data 2>/dev/null || true
 
 echo -e "${GREEN}✓ Docker volumes created${NC}"
 

@@ -25,7 +25,7 @@ services:
       # Modèle par défaut
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma2:2b}
     volumes:
-      - chatbot-engine_ollama_data:/root/.ollama
+      - lantorian_genai_ollama_data:/root/.ollama
     healthcheck:
       test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
       interval: 30s
@@ -52,7 +52,7 @@ services:
     container_name: generative-redis-prod
     command: redis-stack-server --port ${REDIS_INTERNAL_PORT:-16379} --appendonly ${REDIS_APPENDONLY:-yes} --maxmemory ${REDIS_MAX_MEMORY:-1gb} --maxmemory-policy ${REDIS_MAX_MEMORY_POLICY:-allkeys-lru}
     volumes:
-      - chatbot-engine_redis_data:/data
+      - lantorian_genai_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "${REDIS_INTERNAL_PORT:-16379}", "ping"]
       interval: 10s
@@ -107,7 +107,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
       - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS:--c max_connections=200 -c shared_buffers=256MB}
     volumes:
-      - chatbot-engine_postgres_data:/var/lib/postgresql/data
+      - lantorian_genai_postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_INTERNAL_PORT:-15432} -U ${POSTGRES_USER:-ollama_user} -d ${POSTGRES_DB:-ollama_db}"]
@@ -220,11 +220,11 @@ services:
       - "127.0.0.1:${CONFIG_MANAGER_HOST_PORT:-18888}:${CONFIG_MANAGER_INTERNAL_PORT:-18889}"
 
 volumes:
-  chatbot-engine_redis_data:
+  lantorian_genai_redis_data:
     external: true
-  chatbot-engine_ollama_data:
+  lantorian_genai_ollama_data:
     external: true
-  chatbot-engine_postgres_data:
+  lantorian_genai_postgres_data:
     external: true
 
 networks:

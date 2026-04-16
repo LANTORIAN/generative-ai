@@ -54,9 +54,9 @@ scp -r /path/local/generative-ai root@<VPS_IP>:/opt/ollama-stack
 
 ```bash
 # Créer les volumes externes
-docker volume create chatbot-engine_ollama_data
-docker volume create chatbot-engine_redis_data
-docker volume create chatbot-engine_postgres_data
+docker volume create lantorian_genai_ollama_data
+docker volume create lantorian_genai_redis_data
+docker volume create lantorian_genai_postgres_data
 
 # Vérifier
 docker volume ls | grep chatbot-engine
@@ -231,7 +231,7 @@ df -h
 
 # Taille des volumes Docker
 docker volume ls --format "table {{.Name}}\t{{.Mountpoint}}"
-du -sh /var/lib/docker/volumes/chatbot-engine_*
+du -sh /var/lib/docker/volumes/lantorian_genai_*
 
 # Nettoyer les images inutilisées
 docker image prune -a
@@ -285,7 +285,7 @@ OLLAMA_HOST_PORT=11435  # Nouveau port
 docker-compose -f docker-compose.ollama.yml logs postgres
 
 # Supprimer le volume et recommencer
-docker volume rm chatbot-engine_postgres_data
+docker volume rm lantorian_genai_postgres_data
 docker-compose -f docker-compose.ollama.yml up -d postgres
 ```
 
@@ -305,7 +305,7 @@ docker-compose -f docker-compose.ollama.yml exec config-manager env | grep POSTG
 
 ```bash
 # Vérifier l'espace disque
-df -h /var/lib/docker/volumes/chatbot-engine_ollama_data
+df -h /var/lib/docker/volumes/lantorian_genai_ollama_data
 
 # Voir les logs Ollama
 docker-compose -f docker-compose.ollama.yml logs -f ollama | tail -100
@@ -426,7 +426,7 @@ curl -fsSL https://get.docker.com | sh
 cd /opt && git clone <repo>
 
 # 4. Créer les volumes
-docker volume create chatbot-engine_{ollama,redis,postgres}_data
+docker volume create lantorian_genai_{ollama,redis,postgres}_data
 
 # 5. Configurer .env
 cd ollama-stack && nano .env

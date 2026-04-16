@@ -135,7 +135,7 @@ Login avec CONFIG_ADMIN_PASSWORD
 
 ```bash
 # 1. Créer les volumes
-docker volume create chatbot-engine_{ollama,redis,postgres}_data
+docker volume create lantorian_genai_{ollama,redis,postgres}_data
 
 # 2. Configurer .env
 cp .env.example .env

@@ -353,7 +353,7 @@ docker exec generative-postgres-prod psql -U ollama_user -d ollama_db -c \
 nano .env
 
 # 2. Créer le volume
-docker volume create chatbot-engine_postgres_data
+docker volume create lantorian_genai_postgres_data
 
 # 3. Adapter le mot de passe (IMPORTANT!)
 POSTGRES_PASSWORD=votre_mot_de_passe_secure_ici
@@ -392,7 +392,7 @@ psql -h localhost -p 6432 -U ollama_user -d ollama_db -c "SELECT 1;"
 docker exec generative-postgres-prod pg_dump -U ollama_user -d ollama_db > backup.sql
 
 # Full backup
-docker run --rm -v chatbot-engine_postgres_data:/data -v $(pwd):/backup \
+docker run --rm -v lantorian_genai_postgres_data:/data -v $(pwd):/backup \
   postgres:16-alpine tar czf /backup/postgres-backup.tar.gz -C /data .
 ```
 

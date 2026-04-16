@@ -139,8 +139,8 @@ echo ""
 
 # 10. Test des volumes
 echo -e "${YELLOW}10. Volumes persistants${NC}"
-docker volume inspect chatbot-engine_ollama_data > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} ollama_data volume existe" || echo -e "${RED}✗${NC} ollama_data volume manquant"
-docker volume inspect chatbot-engine_redis_data > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} redis_data volume existe" || echo -e "${RED}✗${NC} redis_data volume manquant"
+docker volume inspect lantorian_genai_ollama_data > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} ollama_data volume existe" || echo -e "${RED}✗${NC} ollama_data volume manquant"
+docker volume inspect lantorian_genai_redis_data > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} redis_data volume existe" || echo -e "${RED}✗${NC} redis_data volume manquant"
 test_result "Volumes persistants"
 echo ""
 

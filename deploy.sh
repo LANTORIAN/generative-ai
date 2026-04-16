@@ -11,19 +11,19 @@ echo "🚀 Déploiement Ollama Stack (Ollama + Redis + PostgreSQL + PgBouncer)..
 # Vérifier si les volumes existent, sinon les créer
 echo "📦 Création des volumes persistants..."
 
-docker volume inspect chatbot-engine_ollama_data >/dev/null 2>&1 || {
-    echo "  ✓ Création du volume chatbot-engine_ollama_data..."
-    docker volume create chatbot-engine_ollama_data
+docker volume inspect lantorian_genai_ollama_data >/dev/null 2>&1 || {
+    echo "  ✓ Création du volume lantorian_genai_ollama_data..."
+    docker volume create lantorian_genai_ollama_data
 }
 
-docker volume inspect chatbot-engine_redis_data >/dev/null 2>&1 || {
-    echo "  ✓ Création du volume chatbot-engine_redis_data..."
-    docker volume create chatbot-engine_redis_data
+docker volume inspect lantorian_genai_redis_data >/dev/null 2>&1 || {
+    echo "  ✓ Création du volume lantorian_genai_redis_data..."
+    docker volume create lantorian_genai_redis_data
 }
 
-docker volume inspect chatbot-engine_postgres_data >/dev/null 2>&1 || {
-    echo "  ✓ Création du volume chatbot-engine_postgres_data..."
-    docker volume create chatbot-engine_postgres_data
+docker volume inspect lantorian_genai_postgres_data >/dev/null 2>&1 || {
+    echo "  ✓ Création du volume lantorian_genai_postgres_data..."
+    docker volume create lantorian_genai_postgres_data
 }
 
 # Charger les variables d'environnement

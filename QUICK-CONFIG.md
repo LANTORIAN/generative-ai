@@ -12,8 +12,8 @@ cp .env.example .env
 nano .env  # Adapter les valeurs
 
 # 2. Créer volumes
-docker volume create chatbot-engine_ollama_data
-docker volume create chatbot-engine_redis_data
+docker volume create lantorian_genai_ollama_data
+docker volume create lantorian_genai_redis_data
 
 # 3. Déployer
 chmod +x deploy.sh

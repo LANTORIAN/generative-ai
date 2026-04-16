@@ -52,8 +52,8 @@ Configuration Docker Compose complète pour Ollama avec Redis, PostgreSQL, gesti
 
 ```bash
 # Créer les volumes persistants
-docker volume create chatbot-engine_ollama_data
-docker volume create chatbot-engine_redis_data
+docker volume create lantorian_genai_ollama_data
+docker volume create lantorian_genai_redis_data
 
 # S'assurer que le réseau Traefik existe (coolify par défaut)
 docker network inspect coolify || docker network create coolify

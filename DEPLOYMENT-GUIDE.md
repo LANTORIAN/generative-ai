@@ -67,8 +67,8 @@ cd /path/to/generative-ai
 cp .env.example .env
 
 # Créer les volumes
-docker volume create chatbot-engine_ollama_data
-docker volume create chatbot-engine_redis_data
+docker volume create lantorian_genai_ollama_data
+docker volume create lantorian_genai_redis_data
 ```
 
 ### Étape 2: Lancer le déploiement
@@ -315,7 +315,7 @@ docker logs generative-ollama-warmer
 - Nettoyer cache Redis si plein
 
 ### Mensuelle
-- Backup volumes: `docker run --rm -v chatbot-engine_ollama_data...`
+- Backup volumes: `docker run --rm -v lantorian_genai_ollama_data...`
 - Update images: `docker pull ollama/ollama:latest`
 - Review Prometheus metrics
 

@@ -203,9 +203,9 @@ Store in audit.access_log
 
 | Volume | Size | Path | Content |
 |--------|------|------|---------|
-| `chatbot-engine_ollama_data` | 10-50GB | `/root/.ollama` | Modèles téléchargés |
-| `chatbot-engine_redis_data` | 1GB | `/data` | Cache Redis |
-| `chatbot-engine_postgres_data` | 5-50GB | `/var/lib/postgresql/data` | Base de données |
+| `lantorian_genai_ollama_data` | 10-50GB | `/root/.ollama` | Modèles téléchargés |
+| `lantorian_genai_redis_data` | 1GB | `/data` | Cache Redis |
+| `lantorian_genai_postgres_data` | 5-50GB | `/var/lib/postgresql/data` | Base de données |
 
 ---
 
@@ -225,9 +225,9 @@ Store in audit.access_log
 
 ```bash
 # 1. Volumes doivent exister
-docker volume create chatbot-engine_ollama_data
-docker volume create chatbot-engine_redis_data
-docker volume create chatbot-engine_postgres_data
+docker volume create lantorian_genai_ollama_data
+docker volume create lantorian_genai_redis_data
+docker volume create lantorian_genai_postgres_data
 
 # 2. Réseau Traefik doit exister
 docker network create coolify 2>/dev/null || true
@@ -408,7 +408,7 @@ docker-compose down -v  # Supprime les volumes (ATTENTION!)
 
 ```bash
 # Ollama models
-docker run --rm -v chatbot-engine_ollama_data:/data \
+docker run --rm -v lantorian_genai_ollama_data:/data \
   -v $(pwd):/backup ubuntu tar czf /backup/ollama-backup.tar.gz -C /data .
 
 # PostgreSQL

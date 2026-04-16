@@ -71,11 +71,11 @@ echo ""
 # 7. Backup & Volumes
 echo -e "${YELLOW}7. Backup des données:${NC}"
 echo "# Backup Ollama"
-echo "docker run --rm -v chatbot-engine_ollama_data:/data -v \$(pwd):/backup \\"
+echo "docker run --rm -v lantorian_genai_ollama_data:/data -v \$(pwd):/backup \\" 
 echo "  alpine tar czf /backup/ollama-backup.tar.gz -C /data ."
 echo ""
 echo "# Backup Redis"
-echo "docker run --rm -v chatbot-engine_redis_data:/data -v \$(pwd):/backup \\"
+echo "docker run --rm -v lantorian_genai_redis_data:/data -v \$(pwd):/backup \\" 
 echo "  alpine tar czf /backup/redis-backup.tar.gz -C /data ."
 echo ""
 

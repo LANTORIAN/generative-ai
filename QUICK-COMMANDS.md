@@ -232,9 +232,9 @@ docker-compose exec pgbouncer psql -U postgres -d pgbouncer -c "show pools"
 docker-compose down
 
 # Supprimer les volumes
-docker volume rm chatbot-engine_postgres_data
-docker volume rm chatbot-engine_ollama_data
-docker volume rm chatbot-engine_redis_data
+docker volume rm lantorian_genai_postgres_data
+docker volume rm lantorian_genai_ollama_data
+docker volume rm lantorian_genai_redis_data
 
 # Recréer et redémarrer
 docker-compose up -d
