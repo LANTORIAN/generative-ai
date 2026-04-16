@@ -109,6 +109,15 @@ docker network create coolify
 
 ### 5.b Configurer Nginx avec les domaines (sans Traefik)
 
+Option rapide (script inclus):
+
+```bash
+chmod +x setup-nginx.sh
+./setup-nginx.sh
+```
+
+Option manuelle:
+
 ```bash
 sudo apt-get update && sudo apt-get install -y nginx
 
