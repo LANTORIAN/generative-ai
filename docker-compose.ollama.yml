@@ -43,6 +43,8 @@ services:
     restart: always
     networks:
       - backend
+    ports:
+      - "127.0.0.1:${OLLAMA_HOST_PORT:-21434}:${OLLAMA_INTERNAL_PORT:-21434}"
     depends_on:
       redis:
         condition: service_healthy
