@@ -8,6 +8,28 @@ set -e
 
 echo "🚀 Déploiement Ollama Stack (Ollama + Redis + PostgreSQL + PgBouncer)..."
 
+load_env_file() {
+    env_file="$1"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="$(printf '%s' "$line" | tr -d '\r')"
+
+        case "$line" in
+            ''|\#*)
+                continue
+                ;;
+        esac
+
+        key="${line%%=*}"
+        value="${line#*=}"
+        key="$(printf '%s' "$key" | tr -d '[:space:]')"
+
+        if [ -n "$key" ]; then
+            export "$key=$value"
+        fi
+    done < "$env_file"
+}
+
 # Vérifier si les volumes existent, sinon les créer
 echo "📦 Création des volumes persistants..."
 
@@ -29,11 +51,11 @@ docker volume inspect lantorian_genai_postgres_data >/dev/null 2>&1 || {
 # Charger les variables d'environnement
 if [ -f .env ]; then
     echo "📋 Fichier .env trouvé, utilisation des variables..."
-    export $(cat .env | grep -v '^#' | xargs)
+    load_env_file .env
 else
     echo "⚠️  Fichier .env non trouvé, utilisation des valeurs par défaut"
     cp .env.example .env
-    export $(cat .env | grep -v '^#' | xargs)
+    load_env_file .env
 fi
 
 echo ""
