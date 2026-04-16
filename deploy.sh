@@ -108,7 +108,7 @@ fi
 
 # Tester Redis
 echo "🔴 Test de la connexion à Redis..."
-if docker exec generative-redis-prod redis-cli ping; then
+if docker exec generative-redis-prod redis-cli -p ${REDIS_INTERNAL_PORT:-16379} ping; then
     echo "✅ Redis est opérationnel"
 else
     echo "❌ Impossible de se connecter à Redis"
