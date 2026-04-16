@@ -1,0 +1,235 @@
+version: "3.8"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: generative-ollama-prod
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-coolify}
+      - traefik.http.routers.generative-production.rule=Host(`${OLLAMA_DOMAIN:-ollama.bluevaloris.com}`)
+      - traefik.http.routers.generative-production.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.generative-production.tls=${TRAEFIK_TLS:-true}
+      - traefik.http.services.generative-production.loadbalancer.server.port=${OLLAMA_INTERNAL_PORT:-21434}
+      # Middleware pour restreindre uniquement au domaine bluevaloris.com
+      - traefik.http.middlewares.host-restriction.headers.customrequestheaders.X-Forwarded-Host=${OLLAMA_DOMAIN:-ollama.bluevaloris.com}
+      - traefik.http.routers.generative-production.middlewares=host-restriction@docker
+    environment:
+      - OLLAMA_HOST=0.0.0.0:${OLLAMA_INTERNAL_PORT:-21434}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-60m}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-4}
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-4}
+      # Configuration Redis pour caching
+      - OLLAMA_REDIS_HOST=${REDIS_HOST:-redis}
+      - OLLAMA_REDIS_PORT=${REDIS_INTERNAL_PORT:-16379}
+      # Modèle par défaut
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma2:2b}
+    volumes:
+      - chatbot-engine_ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '${OLLAMA_CPU_LIMIT:-3.5}'
+          memory: ${OLLAMA_MEMORY_LIMIT:-14G}
+        reservations:
+          cpus: '${OLLAMA_CPU_RESERVATION:-4.0}'
+          memory: ${OLLAMA_MEMORY_RESERVATION:-10G}
+    restart: always
+    networks:
+      - backend
+    depends_on:
+      redis:
+        condition: service_healthy
+  
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: generative-redis-prod
+    command: redis-stack-server --port ${REDIS_INTERNAL_PORT:-16379} --appendonly ${REDIS_APPENDONLY:-yes} --maxmemory ${REDIS_MAX_MEMORY:-1gb} --maxmemory-policy ${REDIS_MAX_MEMORY_POLICY:-allkeys-lru}
+    volumes:
+      - chatbot-engine_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "${REDIS_INTERNAL_PORT:-16379}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-0.5}'
+          memory: ${REDIS_MEMORY_LIMIT:-1G}
+        reservations:
+          cpus: '${REDIS_CPU_RESERVATION:-0.25}'
+          memory: ${REDIS_MEMORY_RESERVATION:-512M}
+    networks:
+      - backend
+  
+  ollama-warmer:
+    image: curlimages/curl:latest
+    container_name: generative-ollama-warmer
+    environment:
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma2:2b}
+      - WARMER_INTERVAL=${WARMER_INTERVAL:-300}
+      - WARMER_PROMPT=${WARMER_PROMPT:-ping}
+    command: >
+      sh -c "
+      while true; do
+        curl -X POST http://ollama:${OLLAMA_INTERNAL_PORT:-21434}/api/generate \
+          -H 'Content-Type: application/json' \
+          -d '{
+            \"model\": \"'$$OLLAMA_DEFAULT_MODEL'\",
+            \"prompt\": \"'$$WARMER_PROMPT'\",
+            \"stream\": false
+          }' 2>/dev/null || true;
+        sleep '$$WARMER_INTERVAL';
+      done
+      "
+    restart: always
+    depends_on:
+      - ollama
+    networks:
+      - backend
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    container_name: generative-postgres-prod
+    command: ["postgres", "-c", "port=${POSTGRES_INTERNAL_PORT:-15432}"]
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-ollama_db}
+      - POSTGRES_USER=${POSTGRES_USER:-ollama_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS:--c max_connections=200 -c shared_buffers=256MB}
+    volumes:
+      - chatbot-engine_postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_INTERNAL_PORT:-15432} -U ${POSTGRES_USER:-ollama_user} -d ${POSTGRES_DB:-ollama_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-1.0}'
+          memory: ${POSTGRES_MEMORY_LIMIT:-2G}
+        reservations:
+          cpus: '${POSTGRES_CPU_RESERVATION:-0.5}'
+          memory: ${POSTGRES_MEMORY_RESERVATION:-1G}
+    networks:
+      - backend
+    ports:
+      - "${POSTGRES_HOST_PORT:-25432}:${POSTGRES_INTERNAL_PORT:-15432}"
+
+  # PgBouncer for Connection Pooling
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: generative-pgbouncer-prod
+    entrypoint: ["/bin/sh", "/pgbouncer-entrypoint.sh"]
+    environment:
+      - DATABASES_HOST=postgres
+      - DATABASES_PORT=${POSTGRES_INTERNAL_PORT:-15432}
+      - DATABASES_USER=${POSTGRES_USER:-ollama_user}
+      - DATABASES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+      - DATABASES_DBNAME=${POSTGRES_DB:-ollama_db}
+      - PGBOUNCER_POOL_MODE=${PGBOUNCER_POOL_MODE:-transaction}
+      - PGBOUNCER_MAX_CLIENT_CONN=${PGBOUNCER_MAX_CLIENT_CONN:-1000}
+      - PGBOUNCER_DEFAULT_POOL_SIZE=${PGBOUNCER_DEFAULT_POOL_SIZE:-25}
+      - PGBOUNCER_MIN_POOL_SIZE=${PGBOUNCER_MIN_POOL_SIZE:-10}
+      - PGBOUNCER_LISTEN_PORT=${PGBOUNCER_INTERNAL_PORT:-16432}
+    volumes:
+      - ./pgbouncer-entrypoint.sh:/pgbouncer-entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /tmp/.s.PGSQL.${PGBOUNCER_INTERNAL_PORT:-16432}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '${PGBOUNCER_CPU_LIMIT:-0.5}'
+          memory: ${PGBOUNCER_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: '${PGBOUNCER_CPU_RESERVATION:-0.25}'
+          memory: ${PGBOUNCER_MEMORY_RESERVATION:-256M}
+    networks:
+      - backend
+    ports:
+      - "${PGBOUNCER_HOST_PORT:-26432}:${PGBOUNCER_INTERNAL_PORT:-16432}"
+
+  config-manager:
+    build:
+      context: .
+      dockerfile: config-manager/Dockerfile
+    container_name: generative-config-manager
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-coolify}
+      - traefik.http.routers.config-manager.rule=Host(`config.${PRODUCTION_DOMAIN:-bluevaloris.com}`)
+      - traefik.http.routers.config-manager.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.config-manager.tls=${TRAEFIK_TLS:-true}
+      - traefik.http.services.config-manager.loadbalancer.server.port=${CONFIG_MANAGER_INTERNAL_PORT:-18889}
+    environment:
+      - PGBOUNCER_HOST=${PGBOUNCER_HOST:-pgbouncer}
+      - PGBOUNCER_PORT=${PGBOUNCER_INTERNAL_PORT:-16432}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_INTERNAL_PORT:-16379}
+      - OLLAMA_STATUS_URL=http://ollama:${OLLAMA_INTERNAL_PORT:-21434}/api/tags
+      - CONFIG_MANAGER_INTERNAL_PORT=${CONFIG_MANAGER_INTERNAL_PORT:-18889}
+      - POSTGRES_USER=${POSTGRES_USER:-ollama_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+      - POSTGRES_DB=${POSTGRES_DB:-ollama_db}
+      - CONFIG_ADMIN_PASSWORD=${CONFIG_ADMIN_PASSWORD:-admin}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./.env:/.env:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${CONFIG_MANAGER_INTERNAL_PORT:-18889}').read()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '${CONFIG_MANAGER_CPU_LIMIT:-0.5}'
+          memory: ${CONFIG_MANAGER_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: '${CONFIG_MANAGER_CPU_RESERVATION:-0.25}'
+          memory: ${CONFIG_MANAGER_MEMORY_RESERVATION:-256M}
+    restart: always
+    networks:
+      - backend
+      - traefik
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CONFIG_MANAGER_HOST_PORT:-18888}:${CONFIG_MANAGER_INTERNAL_PORT:-18889}"
+
+volumes:
+  chatbot-engine_redis_data:
+    external: true
+  chatbot-engine_ollama_data:
+    external: true
+  chatbot-engine_postgres_data:
+    external: true
+
+networks:
+  backend:
+  monitoring:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-coolify}
