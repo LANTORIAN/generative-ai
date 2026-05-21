@@ -75,6 +75,7 @@ services:
   ollama-warmer:
     image: curlimages/curl:latest
     container_name: generative-ollama-warmer
+    profiles: ["warmup"]
     environment:
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma2:2b}
       - WARMER_INTERVAL=${WARMER_INTERVAL:-300}
@@ -82,16 +83,21 @@ services:
     command: >
       sh -c "
       while true; do
-        curl -X POST http://ollama:${OLLAMA_INTERNAL_PORT:-21434}/api/generate \
+        curl -sS -o /dev/null -X POST http://ollama:${OLLAMA_INTERNAL_PORT:-21434}/api/generate \
           -H 'Content-Type: application/json' \
           -d '{
             \"model\": \"'$$OLLAMA_DEFAULT_MODEL'\",
             \"prompt\": \"'$$WARMER_PROMPT'\",
             \"stream\": false
-          }' 2>/dev/null || true;
+          }' >/dev/null 2>&1 || true;
         sleep '$$WARMER_INTERVAL';
       done
       "
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: always
     depends_on:
       - ollama
