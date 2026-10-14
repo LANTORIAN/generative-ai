@@ -1,0 +1,71 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-60m}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-4}
+      OLLAMA_NUM_THREAD: ${OLLAMA_NUM_THREAD:-4}
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - '127.0.0.1:21435:11434'
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '3.5'
+          memory: 14G
+    networks:
+      default:
+        aliases:
+          - generative-ollama
+
+  redis:
+    image: redis/redis-stack-server:latest
+    restart: unless-stopped
+    environment:
+      REDIS_ARGS: --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+    networks:
+      default:
+        aliases:
+          - generative-redis
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ollama_db}
+      POSTGRES_USER: ${POSTGRES_USER:-ollama_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      default:
+        aliases:
+          - generative-postgres
+
+volumes:
+  ollama_data: {}
+  redis_data: {}
+  postgres_data: {}
+
